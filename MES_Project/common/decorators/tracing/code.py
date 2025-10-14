@@ -1,33 +1,68 @@
 
-import functools, time, uuid, threading
+"""Tracing helpers that enrich log events with correlation information."""
+
+from __future__ import annotations
+
+import functools
+import threading
+import time
+import uuid
+from typing import Any, Callable, Optional, TypeVar
+
 from ..logging.mes_logger import get_logger
+
+F = TypeVar("F", bound=Callable[..., Any])
+
 _THREAD = threading.local()
-def get_correlation_id(): return getattr(_THREAD, "cid", None)
-def with_correlation(cid=None):
-    def deco(fn):
-        @functools.wraps(fn)
-        def w(*a, **kw):
-            prev=getattr(_THREAD,"cid",None)
+
+
+def get_correlation_id() -> Optional[str]:
+    """Return the correlation identifier associated with the current thread."""
+
+    return getattr(_THREAD, "cid", None)
+
+
+def with_correlation(correlation_id: Optional[str] = None) -> Callable[[F], F]:
+    """Ensure the decorated function executes with a correlation identifier."""
+
+    def decorator(func: F) -> F:
+        @functools.wraps(func)
+        def wrapper(*args: Any, **kwargs: Any):  # type: ignore[misc]
+            previous = getattr(_THREAD, "cid", None)
             try:
-                _THREAD.cid = cid or prev or str(uuid.uuid4())
-                return fn(*a, **kw)
+                _THREAD.cid = correlation_id or previous or str(uuid.uuid4())
+                return func(*args, **kwargs)
             finally:
-                _THREAD.cid = prev
-        return w
-    return deco
-def traced(name=None):
-    log = get_logger(name or "trace")
-    def deco(fn):
-        @functools.wraps(fn)
-        def w(*a, **kw):
-            t0=time.time(); cid=get_correlation_id() or str(uuid.uuid4())
-            log.debug("start", extra={"cid": cid, "func": fn.__name__})
+                if previous is None:
+                    _THREAD.__dict__.pop("cid", None)
+                else:
+                    _THREAD.cid = previous
+
+        return wrapper  # type: ignore[return-value]
+
+    return decorator
+
+
+def traced(logger_name: Optional[str] = None) -> Callable[[F], F]:
+    """Log execution boundaries and duration for the wrapped callable."""
+
+    log = get_logger(logger_name or "trace")
+
+    def decorator(func: F) -> F:
+        @functools.wraps(func)
+        def wrapper(*args: Any, **kwargs: Any):  # type: ignore[misc]
+            correlation = get_correlation_id() or str(uuid.uuid4())
+            start = time.time()
+            log.debug("start", extra={"cid": correlation, "func": func.__name__})
             try:
-                r=fn(*a, **kw)
-                log.info("ok", extra={"cid": cid, "func": fn.__name__, "ms": round((time.time()-t0)*1000,2)})
-                return r
+                result = func(*args, **kwargs)
             except Exception:
-                log.exception("fail", extra={"cid": cid, "func": fn.__name__})
+                log.exception("fail", extra={"cid": correlation, "func": func.__name__})
                 raise
-        return w
-    return deco
+            duration_ms = round((time.time() - start) * 1000, 2)
+            log.info("ok", extra={"cid": correlation, "func": func.__name__, "ms": duration_ms})
+            return result
+
+        return wrapper  # type: ignore[return-value]
+
+    return decorator

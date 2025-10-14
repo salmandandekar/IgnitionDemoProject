@@ -1,6 +1,22 @@
 
-class MESException(Exception): pass
-class ValidationException(MESException): pass
-class InfrastructureException(MESException): pass
-class RepositoryException(MESException): pass
-class AccessDenied(MESException): pass
+"""Domain-specific exception hierarchy for the MES demo project."""
+
+
+class MESException(Exception):
+    """Base class for all custom exceptions raised by the project."""
+
+
+class ValidationException(MESException):
+    """Raised when inputs fail domain validation rules."""
+
+
+class InfrastructureException(MESException):
+    """Raised when infrastructure dependencies cannot be reached or configured."""
+
+
+class RepositoryException(MESException):
+    """Raised when persistence layers experience recoverable errors."""
+
+
+class AccessDenied(MESException):
+    """Raised when the caller lacks the required permissions."""
