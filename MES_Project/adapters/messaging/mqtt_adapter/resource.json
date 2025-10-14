@@ -1,0 +1,9 @@
+{
+  "name": "mqtt_adapter",
+  "enabled": true,
+  "type": "script",
+  "metadata": {
+    "created": "2025-10-09T23:23:27.930342Z",
+    "lastModified": "2025-10-09T23:23:27.930349Z"
+  }
+}

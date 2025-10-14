@@ -1,0 +1,9 @@
+{
+  "name": "cache_provider",
+  "enabled": true,
+  "type": "script",
+  "metadata": {
+    "created": "2025-10-09T23:23:27.928214Z",
+    "lastModified": "2025-10-09T23:23:27.928219Z"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "name": "services",
+  "enabled": true,
+  "type": "script",
+  "metadata": {
+    "created": "2025-10-09T23:23:27.948014Z",
+    "lastModified": "2025-10-09T23:23:27.948022Z"
+  }
+}
