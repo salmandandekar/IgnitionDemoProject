@@ -1,7 +1,7 @@
 from functools import wraps
 
-from common.cache.CacheManager import code as CacheManager
-from common.logging.LogFactory import code as LogFactory
+from common.cache import CacheManager as CacheManager
+from common.logging import LogFactory as LogFactory
 
 
 def cacheable(cache_name, key_fn, ttl_seconds=600):

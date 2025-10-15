@@ -1,8 +1,8 @@
-from common.decorators.TraceDecorator import code as tracedec
-from common.decorators.ExceptionHandlerDecorator import code as exdec
-from common.decorators.CacheDecorator import code as cdec
-from adapters.cache.IgniteAdapter import code as ignite
-from common.logging.LogFactory import code as LogFactory
+from common.decorators import TraceDecorator as tracedec
+from common.decorators import ExceptionHandlerDecorator as exdec
+from common.decorators import CacheDecorator as cdec
+from adapters.cache import IgniteAdapter as ignite
+from common.logging import LogFactory as LogFactory
 
 def _cache_key(q): 
     return "material:%s" % q.id
