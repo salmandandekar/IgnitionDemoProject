@@ -1,5 +1,5 @@
-from adapters.persistence.DatabaseAdapter import code as db
-from common.exceptions.RepositoryException import code as rex
+from adapters.persistence import DatabaseAdapter as db
+from common.exceptions import RepositoryException as rex
 
 def save(material, tx=None):
     try:

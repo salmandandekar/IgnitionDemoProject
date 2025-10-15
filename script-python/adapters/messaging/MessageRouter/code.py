@@ -1,7 +1,7 @@
-from infrastructure.MessagingConfig import code as cfg
-from adapters.messaging.MQTTAdapter import code as mqtt
-from adapters.messaging.KafkaAdapter import code as kafka
-from adapters.messaging.InternalBusAdapter import code as internal
+from infrastructure import MessagingConfig as cfg
+from adapters.messaging import MQTTAdapter as mqtt
+from adapters.messaging import KafkaAdapter as kafka
+from adapters.messaging import InternalBusAdapter as internal
 
 def publish(topic, payload):
     b = cfg.backend().upper()

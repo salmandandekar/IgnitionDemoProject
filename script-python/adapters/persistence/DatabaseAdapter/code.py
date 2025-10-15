@@ -1,5 +1,5 @@
-from infrastructure.DatabaseConfig import code as dbc
-from common.exceptions.RepositoryException import code as rex
+from infrastructure import DatabaseConfig as dbc
+from common.exceptions import RepositoryException as rex
 
 def query_one(sql, params=None, tx=None):
     try:

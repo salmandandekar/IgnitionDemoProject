@@ -15,7 +15,7 @@ if proj not in sys.path:
     sys.path.insert(0, proj)
 
 # Import controller and run a basic flow
-from core.material.presentation.MaterialController import code as ctrl
+from core.material.presentation import MaterialController as ctrl
 
 def run():
     ctrl.create("M-1", "Bolt", "B-001")   # create
