@@ -1,13 +1,13 @@
-from common.decorators.TraceDecorator import code as tracedec
-from common.decorators.ExceptionHandlerDecorator import code as exdec
-from common.security.AccessControl import code as access
-from common.context.SessionContext import code as session
-from core.material.application.Commands import code as cmds
-from core.material.application.CommandHandlers import code as ch
-from core.material.application.Queries import code as q
-from core.material.application.QueryHandlers import code as qh
-from core.material.infrastructure.RepositoryAdapter import code as repo
-from core.material.infrastructure.MessagingAdapter import code as msg
+from common.decorators import TraceDecorator as tracedec
+from common.decorators import ExceptionHandlerDecorator as exdec
+from common.security import AccessControl as access
+from common.context import SessionContext as session
+from core.material.application import Commands as cmds
+from core.material.application import CommandHandlers as ch
+from core.material.application import Queries as q
+from core.material.application import QueryHandlers as qh
+from core.material.infrastructure import RepositoryAdapter as repo
+from core.material.infrastructure import MessagingAdapter as msg
 
 @tracedec.traced
 @exdec.guarded

@@ -1,4 +1,4 @@
-from common.exceptions.MessagingException import code as mex
+from common.exceptions import MessagingException as mex
 
 def publish(topic, payload):
     try:

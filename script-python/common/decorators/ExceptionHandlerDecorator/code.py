@@ -1,8 +1,8 @@
 from functools import wraps
 
-from common.logging.LogFactory import code as LogFactory
-from common.logging.LogFormatter import code as fmt
-from common.exceptions.MESException import code as core
+from common.logging import LogFactory as LogFactory
+from common.logging import LogFormatter as fmt
+from common.exceptions import MESException as core
 
 def guarded(func):
     @wraps(func)
