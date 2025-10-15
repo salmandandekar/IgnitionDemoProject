@@ -1,8 +1,12 @@
+from functools import wraps
+
 from common.cache.CacheManager import code as CacheManager
 from common.logging.LogFactory import code as LogFactory
 
-def cacheable(cache_name, key_fn):
+
+def cacheable(cache_name, key_fn, ttl_seconds=600):
     def decorator(func):
+        @wraps(func)
         def wrapper(*args, **kwargs):
             log = LogFactory.get_logger("Cache")
             key = key_fn(*args, **kwargs)
@@ -10,8 +14,9 @@ def cacheable(cache_name, key_fn):
                 log.debug("CACHE HIT: %s:%s" % (cache_name, key))
                 return CacheManager.get(cache_name, key)
             res = func(*args, **kwargs)
-            CacheManager.put(cache_name, key, res)
+            CacheManager.put(cache_name, key, res, ttl_seconds=ttl_seconds)
             log.debug("CACHE PUT: %s:%s" % (cache_name, key))
             return res
         return wrapper
+
     return decorator
