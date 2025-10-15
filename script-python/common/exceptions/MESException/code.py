@@ -7,6 +7,3 @@ class MESException(Exception):
         self.user_message = (
             user_message or "An unexpected error occurred. Please contact support."
         )
-
-    def __str__(self):
-        return self.user_message
