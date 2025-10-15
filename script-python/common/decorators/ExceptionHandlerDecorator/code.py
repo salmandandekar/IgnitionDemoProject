@@ -4,7 +4,6 @@ from common.logging import LogFactory as LogFactory
 from common.logging import LogFormatter as fmt
 from common.exceptions import MESException as core
 
-
 def guarded(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
