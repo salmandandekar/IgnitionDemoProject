@@ -151,9 +151,11 @@ class CacheManagerTests(unittest.TestCase):
         try:
             CacheManager.put("ttl-cache", "key", "value", ttl_seconds=5)
             self.assertTrue(CacheManager.exists("ttl-cache", "key"))
+            self.assertEqual(CacheManager.get_ttl("ttl-cache", "key"), 5)
             current[0] = 1006
             self.assertFalse(CacheManager.exists("ttl-cache", "key"))
             self.assertIsNone(CacheManager.get("ttl-cache", "key"))
+            self.assertIsNone(CacheManager.get_ttl("ttl-cache", "key"))
         finally:
             CacheManager._now = original_now
 
@@ -162,6 +164,11 @@ class CacheManagerTests(unittest.TestCase):
         CacheManager.put("none-cache", "key", None)
         self.assertTrue(CacheManager.exists("none-cache", "key"))
         self.assertIsNone(CacheManager.get("none-cache", "key"))
+
+    def test_cache_manager_returns_none_ttl_when_not_set(self):
+        CacheManager.invalidate("none-cache")
+        CacheManager.put("none-cache", "key", "value", ttl_seconds=None)
+        self.assertIsNone(CacheManager.get_ttl("none-cache", "key"))
 
 
 class CacheDecoratorTests(unittest.TestCase):
