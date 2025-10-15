@@ -103,18 +103,18 @@ _install_system_modules()
 # ---------------------------------------------------------------------------
 # Imports of project modules under test.
 # ---------------------------------------------------------------------------
-from common.cache.CacheManager import code as CacheManager
-from common.decorators.CacheDecorator import code as cache_decorator_module
-from common.decorators.ExceptionHandlerDecorator import code as exception_decorator_module
-from common.decorators.TraceDecorator import code as trace_decorator_module
-from common.decorators.TransactionDecorator import code as transaction_decorator_module
-from common.security.AccessControl import code as access_control_module
-from common.security.CryptoProvider import code as crypto_provider_module
-from common.logging.LogFactory import code as log_factory_module
-from common.logging.LogFormatter import code as log_formatter_module
-from common.context.SessionContext import code as session_context_module
-from common.exceptions.MESException import code as mes_exception_module
-from common.exceptions.SecurityException import code as security_exception_module
+from common.cache import CacheManager as CacheManager
+from common.decorators import CacheDecorator as cache_decorator_module
+from common.decorators import ExceptionHandlerDecorator as exception_decorator_module
+from common.decorators import TraceDecorator as trace_decorator_module
+from common.decorators import TransactionDecorator as transaction_decorator_module
+from common.security import AccessControl as access_control_module
+from common.security import CryptoProvider as crypto_provider_module
+from common.logging import LogFactory as log_factory_module
+from common.logging import LogFormatter as log_formatter_module
+from common.context import SessionContext as session_context_module
+from common.exceptions import MESException as mes_exception_module
+from common.exceptions import SecurityException as security_exception_module
 
 
 class _TestLogger(object):

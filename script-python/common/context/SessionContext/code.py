@@ -1,6 +1,6 @@
 # No prints; central accessor of session-level context (user, tenant, correlationId).
 # Uses Ignition 'system' if available, else safe fallbacks.
-from common.context.TenantResolver import code as TenantResolver
+from common.context import TenantResolver as TenantResolver
 
 
 def current():

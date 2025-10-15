@@ -1,4 +1,4 @@
-from adapters.messaging.MessageRouter import code as router
+from adapters.messaging import MessageRouter as router
 
 def publish(envelope):
     # Route to configured backend; topic is noun for ISA-95

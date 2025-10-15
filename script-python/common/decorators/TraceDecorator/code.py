@@ -1,8 +1,8 @@
 from functools import wraps
 
-from common.logging.LogFactory import code as LogFactory
-from common.logging.LogFormatter import code as fmt
-from common.context.SessionContext import code as Session
+from common.logging import LogFactory as LogFactory
+from common.logging import LogFormatter as fmt
+from common.context import SessionContext as Session
 
 
 def traced(func):

@@ -21,7 +21,7 @@ def require(roles):
                 except Exception:
                     continue
             if not authorized:
-                from common.exceptions.SecurityException import code as sec
+                from common.exceptions import SecurityException as sec
                 raise sec.SecurityException("Insufficient role")
             return func(*args, **kwargs)
 
