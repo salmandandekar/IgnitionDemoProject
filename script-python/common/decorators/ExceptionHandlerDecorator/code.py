@@ -32,6 +32,6 @@ def guarded(func):
                 user_message="An unexpected error occurred. Please contact support.",
                 code="UNHANDLED",
                 data={"inner": str(ex)}
-            ) from ex
+            )
 
     return wrapper
