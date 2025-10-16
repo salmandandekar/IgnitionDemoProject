@@ -1,12 +1,14 @@
+# common/context/SessionContext.py
 """
 SessionContext
 --------------
-Provides a unified, standards-compliant context dict:
+Provides a unified, validated context dictionary:
 {user, tenant, correlationId, host, sessionId}
 
-- Calls TenantResolver to determine tenant.
-- Validates & sanitizes output via ContextValidator.
-- Generates UUID correlationId if missing.
+- Detects Perspective sessions and extracts identity safely.
+- Falls back gracefully in Designer or Gateway scope.
+- Integrates with ContextConfig (defaults) and ContextValidator.
+- Compliant with SEI & ISO 25010/42010/27001 for logging & context governance.
 """
 
 import uuid
@@ -22,7 +24,15 @@ def _uuid():
     except Exception:
         return "na"
 
-def _username():
+def _username(session=None):
+    """Determine current username (Perspective, Hybrid, or Gateway)."""
+    try:
+        if session and getattr(session, "props", None):
+            u = getattr(session.props.auth.user, "username", None)
+            if u:
+                return u
+    except Exception:
+        pass
     try:
         from system.util import getUserName
         return getUserName() or "system"
@@ -30,14 +40,18 @@ def _username():
         return "system"
 
 def _host():
+    """Get gateway or client host identifier."""
     try:
         from system.util import getHostName
         return getHostName() or "unknown"
     except Exception:
         return "unknown"
 
-def _session_id():
+def _session_id(session=None):
+    """Get session ID if running in Perspective."""
     try:
+        if session and hasattr(session, "id"):
+            return session.id
         from system.util import getSessionInfo
         sessions = getSessionInfo() or []
         return sessions[0].get("id") if sessions else None
@@ -46,30 +60,33 @@ def _session_id():
 
 def current(incoming=None):
     """
-    Returns the current session context dictionary.
-    - Propagates incoming correlationId / tenant if present and valid.
-    - Never raises exceptions.
+    Returns current execution context:
+    {
+      user, tenant, correlationId, host, sessionId
+    }
+
+    Supports:
+    - Perspective sessions (pass 'session' in incoming)
+    - Gateway / Designer / Timer scripts (fallback)
+    - Hybrid Authentication users (via TenantResolver)
     """
     inc = incoming or {}
+    sess = inc.get("session")
     corr = inc.get("correlationId") or _uuid()
 
-    tenant = None
-    t_in = inc.get("tenant")
-    if t_in:
-        tenant = TenantResolver.resolve(incoming={"tenant": t_in})
-    if not tenant:
-        tenant = TenantResolver.resolve(
-            default_tenant=CONFIG.get("DEFAULT_TENANT"),
-            allow_default=CONFIG.get("ALLOW_DEFAULT", False),
-            incoming=inc
-        )
+    # Tenant resolution with full strategy chain
+    tenant = TenantResolver.resolve(
+        default_tenant=CONFIG.get("DEFAULT_TENANT"),
+        allow_default=CONFIG.get("ALLOW_DEFAULT", False),
+        incoming=inc
+    )
 
     ctx = {
-        "user": _username(),
+        "user": _username(sess),
         "tenant": tenant,
         "correlationId": corr,
         "host": _host(),
-        "sessionId": _session_id(),
+        "sessionId": _session_id(sess),
     }
 
     ctx = sanitize_context(ctx)
