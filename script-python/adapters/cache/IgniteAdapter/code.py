@@ -1,5 +1,5 @@
-from common.cache import IgniteCacheProvider as ignite
-from common.cache import CacheManager as local
+from common.cache.IgniteCacheProvider import code as ignite
+from common.cache.CacheManager import code as local
 
 def get(cache_name):
     # Try Ignite; fallback to local cache bucket (managed by CacheManager)

@@ -1,5 +1,5 @@
-from adapters.cache import IgniteAdapter as ignite
-from common.cache import CacheManager as local
+from adapters.cache.IgniteAdapter import code as ignite
+from common.cache.CacheManager import code as local
 
 def get_cache():
     cache = ignite.get("material")
