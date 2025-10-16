@@ -1,30 +1,77 @@
-from common.decorators import TraceDecorator as tracedec
-from common.decorators import ExceptionHandlerDecorator as exdec
-from common.decorators import TransactionDecorator as txdec
-from common.decorators import CacheDecorator as cdec
-from infrastructure import DatabaseConfig as dbc
-from core.material.domain import Entities as entities
-from core.material.domain import DomainServices as dsvc
-from core.material.domain import Events as events
-from core.material.ports import RepositoryPort as repo_port
-from core.material.ports import MessagingPort as msg_port
-from infrastructure import ISA95Config as isa95
+"""Application service layer for handling write operations."""
 
-# Cache key function for handlers
-def _mat_key(cmd): 
-    return "material:%s" % cmd.id
+from common.utils.Result import code as ResultModule
+from core.material.domain.Events import code as events
 
-@tracedec.traced
-@exdec.guarded
-@txdec.transactional(datasource=dbc.datasource_name())
-def handle_create(cmd, repository, messenger, _tx=None):
-    assert isinstance(repository, repo_port.MaterialRepositoryPort)
-    assert isinstance(messenger, msg_port.MaterialMessagingPort)
-    dsvc.validate_creation(cmd.name, cmd.code)
-    m = entities.Material(cmd.id, cmd.name, cmd.code)
-    repository.save(m, tx=_tx)
-    # publish domain event as ISA-95 envelope
-    envelope = isa95.new_envelope("report", "materialEvent", {"materialId": cmd.id, "name": cmd.name, "code": cmd.code})
-    messenger.publish(envelope)
-    # invalidate cache if needed (fresh read-through on next query)
-    return m
+Result = ResultModule.Result
+
+
+def _invalidate_material_cache(cache_port, user_id):
+    if not cache_port:
+        return
+    try:
+        cache_port.invalidate("materials:%s" % user_id)
+    except Exception:
+        pass
+
+
+def handle_create_material(cmd, repository, cache_port=None, messenger=None):
+    result = repository.insert_material(cmd.material, cmd.user_id)
+    _invalidate_material_cache(cache_port, cmd.user_id)
+    if messenger:
+        messenger.publish(events.MaterialCreated(cmd.material.material_id.value, cmd.material.name))
+        messenger.info("Material created", material=cmd.material.to_record())
+    return Result.Ok(result)
+
+
+def handle_update_material(cmd, repository, cache_port=None, messenger=None):
+    result = repository.update_material(cmd.material, cmd.user_id)
+    _invalidate_material_cache(cache_port, cmd.user_id)
+    if messenger:
+        messenger.publish(events.MaterialUpdated(cmd.material.material_id.value, cmd.material.name))
+        messenger.info("Material updated", material=cmd.material.to_record())
+    return Result.Ok(result)
+
+
+def handle_delete_material(cmd, repository, cache_port=None, messenger=None):
+    result = repository.delete_material(cmd.material_id, cmd.updated_by, cmd.user_id)
+    _invalidate_material_cache(cache_port, cmd.user_id)
+    if messenger:
+        messenger.publish(events.MaterialDeleted(cmd.material_id, cmd.updated_by))
+        messenger.info("Material deleted", material_id=cmd.material_id)
+    return Result.Ok(result)
+
+
+def handle_insert_route_link(cmd, repository, messenger=None):
+    result = repository.insert_route_link(cmd.route_dataset, cmd.material_id, cmd.user_id)
+    if messenger:
+        messenger.publish(events.MaterialRoutesLinked(cmd.material_id, [cmd.route_dataset]))
+        messenger.info("Material route linked", material_id=cmd.material_id)
+    return Result.Ok(result)
+
+
+def handle_update_default_route(cmd, repository, messenger=None):
+    result = repository.update_default_route(cmd.material_id, cmd.route_id, cmd.is_secondary, cmd.user_id)
+    if messenger:
+        messenger.info(
+            "Material default route updated",
+            material_id=cmd.material_id,
+            route_id=cmd.route_id,
+            is_secondary=cmd.is_secondary,
+        )
+    return Result.Ok(result)
+
+
+def handle_delete_route_link(cmd, repository, messenger=None):
+    result = repository.delete_route_link(cmd.material_id, cmd.route_id, cmd.user_id)
+    if messenger:
+        messenger.info("Material route link deleted", material_id=cmd.material_id, route_id=cmd.route_id)
+    return Result.Ok(result)
+
+
+def handle_bulk_upload_materials(cmd, repository, messenger=None):
+    result = repository.bulk_upload_materials(cmd.json_materials, cmd.clock_id, cmd.user_id)
+    if messenger:
+        messenger.publish(events.MaterialsBulkImported(result.get("SuccessCount", 0), result.get("FailureCount", 0)))
+        messenger.info("Bulk materials upload executed", summary=result)
+    return Result.Ok(result)
