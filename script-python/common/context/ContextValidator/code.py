@@ -5,6 +5,11 @@ Validates and sanitizes context data in accordance with ISO 27001 A.12.4 (loggin
 import re
 from common.context.ContextConfig import CONFIG
 
+try:
+    basestring  # type: ignore[name-defined]
+except NameError:  # pragma: no cover - Python 3 compatibility
+    basestring = str  # type: ignore[assignment]
+
 _ALLOWED_TENANTS = set(CONFIG["ALLOWED_TENANTS"])
 _TENANT_PATTERN = re.compile(r"^[A-Za-z0-9_-]{3,32}$")
 
