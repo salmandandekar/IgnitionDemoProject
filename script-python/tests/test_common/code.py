@@ -1,3 +1,5 @@
+import importlib
+import json
 import os
 import sys
 import unittest
@@ -13,10 +15,15 @@ if PROJECT_ROOT not in sys.path:
 # Minimal Ignition "system" module stubs used across cross-cutting tests.
 # ---------------------------------------------------------------------------
 _DB_CALLS = []
+_DB_UPDATES = []
 
 
 def _reset_db_calls():
     del _DB_CALLS[:]
+
+
+def _reset_db_updates():
+    del _DB_UPDATES[:]
 
 
 def _beginTransaction(datasource):
@@ -35,6 +42,11 @@ def _rollbackTransaction(tx):
 
 def _closeTransaction(tx):
     _DB_CALLS.append(("close", tx))
+
+
+def _runPrepUpdate(sql, params, tx=None):
+    _DB_UPDATES.append((sql, list(params), tx))
+    return 1
 
 
 def _getLogger(name):
@@ -77,8 +89,11 @@ def _install_system_modules():
     db_module.commitTransaction = _commitTransaction
     db_module.rollbackTransaction = _rollbackTransaction
     db_module.closeTransaction = _closeTransaction
+    db_module.runPrepUpdate = _runPrepUpdate
     db_module._calls = _DB_CALLS
+    db_module._updates = _DB_UPDATES
     db_module.reset = _reset_db_calls
+    db_module.reset_updates = _reset_db_updates
 
     util_module = ModuleType("system.util")
     util_module.getLogger = _getLogger
@@ -100,21 +115,36 @@ def _install_system_modules():
 
 _install_system_modules()
 
+
+def _load_resource_module(dotted_name):
+    module = importlib.import_module("%s.code" % dotted_name)
+    sys.modules[dotted_name] = module
+    parent, _, child = dotted_name.rpartition(".")
+    if parent:
+        parent_module = sys.modules.get(parent)
+        if parent_module is None:
+            parent_module = importlib.import_module(parent)
+        setattr(parent_module, child, module)
+    return module
+
 # ---------------------------------------------------------------------------
 # Imports of project modules under test.
 # ---------------------------------------------------------------------------
-from common.cache import CacheManager as CacheManager
-from common.decorators import CacheDecorator as cache_decorator_module
-from common.decorators import ExceptionHandlerDecorator as exception_decorator_module
-from common.decorators import TraceDecorator as trace_decorator_module
-from common.decorators import TransactionDecorator as transaction_decorator_module
-from common.security import AccessControl as access_control_module
-from common.security import CryptoProvider as crypto_provider_module
-from common.logging import LogFactory as log_factory_module
-from common.logging import LogFormatter as log_formatter_module
-from common.context import SessionContext as session_context_module
-from common.exceptions import MESException as mes_exception_module
-from common.exceptions import SecurityException as security_exception_module
+log_factory_module = _load_resource_module("common.logging.LogFactory")
+log_formatter_module = _load_resource_module("common.logging.LogFormatter")
+mes_exception_module = _load_resource_module("common.exceptions.MESException")
+security_exception_module = _load_resource_module("common.exceptions.SecurityException")
+CacheManager = _load_resource_module("common.cache.CacheManager")
+cache_decorator_module = _load_resource_module("common.decorators.CacheDecorator")
+exception_decorator_module = _load_resource_module("common.decorators.ExceptionHandlerDecorator")
+trace_decorator_module = _load_resource_module("common.decorators.TraceDecorator")
+transaction_decorator_module = _load_resource_module("common.decorators.TransactionDecorator")
+access_control_module = _load_resource_module("common.security.AccessControl")
+crypto_provider_module = _load_resource_module("common.security.CryptoProvider")
+context_config_module = _load_resource_module("common.context.ContextConfig")
+_load_resource_module("common.context.ContextValidator")
+_load_resource_module("common.context.TenantResolver")
+session_context_module = _load_resource_module("common.context.SessionContext")
 
 
 class _TestLogger(object):
@@ -206,6 +236,7 @@ class ExceptionHandlerDecoratorTests(unittest.TestCase):
         self.logger = _TestLogger()
         self.original_get_logger = log_factory_module.get_logger
         log_factory_module.get_logger = lambda name="MES": self.logger
+        sys.modules["system.db"].reset_updates()
 
     def tearDown(self):
         log_factory_module.get_logger = self.original_get_logger
@@ -213,24 +244,40 @@ class ExceptionHandlerDecoratorTests(unittest.TestCase):
     def test_passthrough_mes_exception(self):
         @exception_decorator_module.guarded
         def raises_mes():
-            raise mes_exception_module.MESException("boom", code="BAD")
+            raise mes_exception_module.MESException("boom", code="BAD", data={"detail": 1})
 
-        with self.assertRaises(mes_exception_module.MESException) as ctx:
-            raises_mes()
-        self.assertEqual(ctx.exception.code, "BAD")
+        message = raises_mes()
+        self.assertTrue(message)
+        updates = sys.modules["system.db"]._updates
+        self.assertTrue(updates)
+        sql, params, tx = updates[-1]
+        self.assertIn("mes_error_log", sql.lower())
+        self.assertEqual(params[1], "raises_mes")
+        self.assertEqual(params[2], "MESException")
+        self.assertEqual(params[3], "BAD")
+        meta = json.loads(params[8])
+        self.assertIn("data", meta)
+        self.assertEqual(meta["data"], {"detail": 1})
         self.assertTrue(
             any(level == "error" and "MESException" in msg for level, msg in self.logger.records)
         )
 
     def test_wraps_non_mes_exception(self):
         @exception_decorator_module.guarded
-        def raises_value_error():
+        def raises_value_error(value):
             raise ValueError("bad stuff")
 
-        with self.assertRaises(mes_exception_module.MESException) as ctx:
-            raises_value_error()
-        self.assertEqual(ctx.exception.code, "UNHANDLED")
-        self.assertEqual(ctx.exception.data.get("type"), "ValueError")
+        result = raises_value_error(5)
+        self.assertTrue(result)
+        updates = sys.modules["system.db"]._updates
+        self.assertTrue(updates)
+        sql, params, tx = updates[-1]
+        self.assertEqual(params[2], "ValueError")
+        self.assertEqual(params[3], "UNHANDLED")
+        self.assertTrue(params[7])
+        meta = json.loads(params[8])
+        self.assertIn("args", meta)
+        self.assertIn("kwargs", meta)
         self.assertTrue(
             any(level == "error" and "UnhandledException" in msg for level, msg in self.logger.records)
         )
@@ -353,7 +400,8 @@ class SessionContextTests(unittest.TestCase):
     def test_current_uses_system_defaults(self):
         ctx = session_context_module.current()
         self.assertEqual(ctx["user"], "tester")
-        self.assertEqual(ctx["tenant"], "default")
+        expected_tenant = context_config_module.CONFIG.get("DEFAULT_TENANT")
+        self.assertEqual(ctx["tenant"], expected_tenant)
         self.assertTrue(ctx["correlationId"])
 
 
