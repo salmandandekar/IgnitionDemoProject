@@ -1,0 +1,10 @@
+{
+  "projectVersion": "1.0.0",
+  "typeId": "resource/python",
+  "name": "tracing_decorator",
+  "scope": "G",
+  "version": 1,
+  "files": [
+    "code.py"
+  ]
+}
