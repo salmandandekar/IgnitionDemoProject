@@ -1,0 +1,10 @@
+{
+  "projectVersion": "1.0.0",
+  "typeId": "resource/python",
+  "scope": "G",
+  "version": 1,
+  "files": [
+    "code.py"
+  ],
+  "name": "line_event_publisher"
+}

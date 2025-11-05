@@ -1,0 +1,10 @@
+{
+  "projectVersion": "1.0.0",
+  "typeId": "resource/python",
+  "name": "get_site_query",
+  "scope": "G",
+  "version": 1,
+  "files": [
+    "code.py"
+  ]
+}
